@@ -17,8 +17,9 @@ export default function Tugas() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Daftar mata kuliah otomatis dari data tugas
+  // Daftar mata kuliah dan semester otomatis dari data tugas
   const [matkulList, setMatkulList] = useState([]);
+  const [semesterList, setSemesterList] = useState([]);
 
   const [formVisible, setFormVisible] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -31,6 +32,9 @@ export default function Tugas() {
     status_code: 0,
     matkul: "",
     matkulBaru: "",
+    nilai: "",
+    semester: "",
+    semesterBaru: "",
   });
 
   // Pilihan urut
@@ -49,18 +53,17 @@ export default function Tugas() {
     );
   }
 
-function toDatetimeLocal(dateString) {
-  if (!dateString) return "";
-  const dt = new Date(dateString);
-  // Buat waktu lokal tanpa timezone offset
-  const pad = (num) => num.toString().padStart(2, "0");
-  const yyyy = dt.getFullYear();
-  const mm = pad(dt.getMonth() + 1);
-  const dd = pad(dt.getDate());
-  const hh = pad(dt.getHours());
-  const min = pad(dt.getMinutes());
-  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-}
+  function toDatetimeLocal(dateString) {
+    if (!dateString) return "";
+    const dt = new Date(dateString);
+    const pad = (num) => num.toString().padStart(2, "0");
+    const yyyy = dt.getFullYear();
+    const mm = pad(dt.getMonth() + 1);
+    const dd = pad(dt.getDate());
+    const hh = pad(dt.getHours());
+    const min = pad(dt.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  }
 
   async function fetchTugas() {
     try {
@@ -75,22 +78,24 @@ function toDatetimeLocal(dateString) {
       );
       setMatkulList(Array.from(matkulSet));
 
+      // Update daftar semester dari tugas yang ada
+      const semesterSet = new Set(
+        docs.map((d) => d.semester).filter(Boolean)
+      );
+      setSemesterList(Array.from(semesterSet));
+
       // Urutkan data
       if (sortBy === "deadline") {
         docs = docs.sort((a, b) => {
-          // Urut berdasarkan due_date + jam ascending
           if (!a.due_date) return 1;
           if (!b.due_date) return -1;
           return new Date(a.due_date) - new Date(b.due_date);
         });
       } else if (sortBy === "baru") {
-        // Urut terbaru berdasarkan waktu dibuat (asumsikan ada $createdAt)
-        // Jika tidak ada, pakai fallback tanggal deadline descending
         docs = docs.sort((a, b) => {
           if (a.$createdAt && b.$createdAt) {
             return new Date(b.$createdAt) - new Date(a.$createdAt);
           }
-          // fallback:
           if (!a.due_date) return 1;
           if (!b.due_date) return -1;
           return new Date(b.due_date) - new Date(a.due_date);
@@ -99,7 +104,7 @@ function toDatetimeLocal(dateString) {
 
       setTugas(docs);
       setLoading(false);
-      setPage(1); // reset page saat data baru
+      setPage(1);
     } catch (err) {
       setError(err.message || "Gagal ambil data tugas");
       setLoading(false);
@@ -122,7 +127,6 @@ function toDatetimeLocal(dateString) {
   function handleMatkulSelect(e) {
     const val = e.target.value;
     if (val === "__new__") {
-      // user ingin tambah matkul baru
       setFormData((prev) => ({
         ...prev,
         matkul: "",
@@ -133,6 +137,24 @@ function toDatetimeLocal(dateString) {
         ...prev,
         matkul: val,
         matkulBaru: "",
+      }));
+    }
+  }
+
+  // Saat pilih semester dari dropdown
+  function handleSemesterSelect(e) {
+    const val = e.target.value;
+    if (val === "__new__") {
+      setFormData((prev) => ({
+        ...prev,
+        semester: "",
+        semesterBaru: "",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        semester: val,
+        semesterBaru: "",
       }));
     }
   }
@@ -161,12 +183,23 @@ function toDatetimeLocal(dateString) {
       }
     }
 
+    // Tentukan nilai semester yang akan disimpan
+    let semesterToSave = formData.semester;
+    if (formData.semesterBaru.trim()) {
+      semesterToSave = formData.semesterBaru.trim();
+      if (!semesterList.includes(semesterToSave)) {
+        setSemesterList((prev) => [...prev, semesterToSave]);
+      }
+    }
+
     const payload = {
       title: formData.title.trim(),
       description: formData.description.trim(),
       due_date: formData.due_date,
       status_code: Number(formData.status_code),
       matkul: matkulToSave,
+      nilai: formData.status_code === 2 ? formData.nilai.trim() : "",
+      semester: semesterToSave,
     };
 
     try {
@@ -196,6 +229,9 @@ function toDatetimeLocal(dateString) {
         status_code: 0,
         matkul: "",
         matkulBaru: "",
+        nilai: "",
+        semester: "",
+        semesterBaru: "",
       });
       await fetchTugas();
     } catch (err) {
@@ -213,6 +249,9 @@ function toDatetimeLocal(dateString) {
       status_code: t.status_code || 0,
       matkul: t.matkul || "",
       matkulBaru: "",
+      nilai: t.nilai || "",
+      semester: t.semester || "",
+      semesterBaru: "",
     });
     setFormVisible(true);
   }
@@ -236,6 +275,9 @@ function toDatetimeLocal(dateString) {
       status_code: 0,
       matkul: "",
       matkulBaru: "",
+      nilai: "",
+      semester: "",
+      semesterBaru: "",
     });
     setFormVisible(true);
   }
@@ -250,6 +292,9 @@ function toDatetimeLocal(dateString) {
       status_code: 0,
       matkul: "",
       matkulBaru: "",
+      nilai: "",
+      semester: "",
+      semesterBaru: "",
     });
   }
 
@@ -258,6 +303,7 @@ function toDatetimeLocal(dateString) {
   const pagedTugas = tugas.slice(startIdx, startIdx + PAGE_SIZE);
   const totalPages = Math.ceil(tugas.length / PAGE_SIZE);
 
+  // Styles (sama seperti kode aslinya)
   const fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
   const tableStyle = {
     width: "100%",
@@ -384,6 +430,7 @@ function toDatetimeLocal(dateString) {
                 <th style={{ ...thtdStyle, ...thStyle, width: 160 }}>Deadline</th>
                 <th style={{ ...thtdStyle, ...thStyle, width: 130 }}>Status</th>
                 <th style={{ ...thtdStyle, ...thStyle }}>Mata Kuliah</th>
+                <th style={{ ...thtdStyle, ...thStyle }}>Smt</th>
                 <th style={{ ...thtdStyle, ...thStyle, width: 140 }}>Aksi</th>
               </tr>
             </thead>
@@ -402,6 +449,7 @@ function toDatetimeLocal(dateString) {
                   </td>
                   <td style={thtdStyle}>{statusMapping[t.status_code] ?? "Unknown"}</td>
                   <td style={thtdStyle}>{t.matkul || "-"}</td>
+                  <td style={thtdStyle}>{t.semester || "-"}</td>
                   <td style={thtdStyle}>
                     <button
                       style={editBtnStyle}
@@ -423,7 +471,6 @@ function toDatetimeLocal(dateString) {
             </tbody>
           </table>
 
-          {/* Pagination Controls */}
           {totalPages > 1 && (
             <div
               style={{
@@ -500,7 +547,7 @@ function toDatetimeLocal(dateString) {
           </label>
 
           <label style={labelStyle}>
-            Deadline: ( ditambah 7 jam dari waktu normal )
+            Deadline:
             <input
               type="datetime-local"
               name="due_date"
@@ -521,15 +568,12 @@ function toDatetimeLocal(dateString) {
               disabled={formLoading}
               style={inputStyle}
             >
-              {Object.entries(statusMapping).map(([key, val]) => (
-                <option key={key} value={key}>
-                  {val}
-                </option>
-              ))}
+              <option value={0}>Belum dikerjakan</option>
+              <option value={1}>Sedang dikerjakan</option>
+              <option value={2}>Selesai</option>
             </select>
           </label>
 
-          {/* Pilihan Mata Kuliah */}
           <label style={labelStyle}>
             Mata Kuliah:
             <select
@@ -561,39 +605,90 @@ function toDatetimeLocal(dateString) {
                 disabled={formLoading}
                 placeholder="Masukkan nama mata kuliah baru"
                 style={inputStyle}
+                autoComplete="off"
               />
             </label>
           )}
 
-          <button
-            type="submit"
-            disabled={formLoading}
-            style={{
-              ...addBtnStyle,
-              width: "100%",
-              marginBottom: 12,
-              fontWeight: "700",
-              fontSize: 16,
-            }}
-          >
-            {formLoading ? "Menyimpan..." : "Simpan"}
-          </button>
+          <label style={labelStyle}>
+            Semester:
+            <select
+              name="semester"
+              value={formData.semester || "__new__"}
+              onChange={handleSemesterSelect}
+              disabled={formLoading}
+              style={inputStyle}
+            >
+              <option value="">-- Pilih Semester --</option>
+              {semesterList.map((sem) => (
+                <option key={sem} value={sem}>
+                  {sem}
+                </option>
+              ))}
+              <option value="__new__">Tambah semester baru...</option>
+            </select>
+          </label>
 
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={formLoading}
-            style={{
-              ...delBtnStyle,
-              width: "100%",
-              backgroundColor: "#555",
-              fontWeight: "700",
-              fontSize: 16,
-              boxShadow: "none",
-            }}
-          >
-            Batal
-          </button>
+          {/* Input semester baru jika pilih Tambah */}
+          {formData.semester === "" && (
+            <label style={labelStyle}>
+              Semester Baru:
+              <input
+                type="text"
+                name="semesterBaru"
+                value={formData.semesterBaru}
+                onChange={handleChange}
+                disabled={formLoading}
+                placeholder="Masukkan nama semester baru"
+                style={inputStyle}
+                autoComplete="off"
+              />
+            </label>
+          )}
+
+          {/* Input nilai muncul hanya kalau status selesai */}
+          {formData.status_code === 2 && (
+            <label style={labelStyle}>
+              Nilai:
+              <input
+                type="text"
+                name="nilai"
+                value={formData.nilai}
+                onChange={handleChange}
+                disabled={formLoading}
+                placeholder="Masukkan nilai"
+                style={inputStyle}
+                autoComplete="off"
+              />
+            </label>
+          )}
+
+          <div style={{ marginTop: 20 }}>
+            <button
+              type="submit"
+              disabled={formLoading}
+              style={{
+                ...btnStyle,
+                backgroundColor: "#4caf50",
+                color: "white",
+                marginRight: 12,
+              }}
+            >
+              {formLoading ? "Menyimpan..." : "Simpan"}
+            </button>
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={formLoading}
+              style={{
+                ...btnStyle,
+                backgroundColor: "#f44336",
+                color: "white",
+              }}
+            >
+              Batal
+            </button>
+          </div>
         </form>
       )}
     </div>
