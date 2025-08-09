@@ -10,39 +10,96 @@ const statusMapping = {
   2: "Selesai",
 };
 
+const PAGE_SIZE = 10;
+
 export default function Tugas() {
   const [tugas, setTugas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Daftar mata kuliah otomatis dari data tugas
+  const [matkulList, setMatkulList] = useState([]);
+
   const [formVisible, setFormVisible] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     $id: null,
     title: "",
     description: "",
     due_date: "",
     status_code: 0,
+    matkul: "",
+    matkulBaru: "",
   });
-  const [formLoading, setFormLoading] = useState(false);
 
-  const [sortBy, setSortBy] = useState("deadline");
-  const itemsPerPage = 10;
-  const [currentPage, setCurrentPage] = useState(1);
+  // Pilihan urut
+  const [sortBy, setSortBy] = useState("deadline"); // "deadline" atau "baru"
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+
+  // Validasi document ID
   function isValidDocumentId(id) {
     if (!id || id === null || id === undefined || id === "") return false;
-    return typeof id === "string" && 
-           id.length <= 36 && 
-           /^[a-zA-Z0-9][a-zA-Z0-9.\-_]*$/.test(id);
+    return (
+      typeof id === "string" &&
+      id.length <= 36 &&
+      /^[a-zA-Z0-9][a-zA-Z0-9.\-_]*$/.test(id)
+    );
   }
+
+function toDatetimeLocal(dateString) {
+  if (!dateString) return "";
+  const dt = new Date(dateString);
+  // Buat waktu lokal tanpa timezone offset
+  const pad = (num) => num.toString().padStart(2, "0");
+  const yyyy = dt.getFullYear();
+  const mm = pad(dt.getMonth() + 1);
+  const dd = pad(dt.getDate());
+  const hh = pad(dt.getHours());
+  const min = pad(dt.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
 
   async function fetchTugas() {
     try {
       setLoading(true);
       setError(null);
       const response = await databases.listDocuments(databaseId, collectionId);
-      setTugas(response.documents);
+      let docs = response.documents;
+
+      // Update daftar matkul dari tugas yang ada
+      const matkulSet = new Set(
+        docs.map((d) => d.matkul).filter(Boolean)
+      );
+      setMatkulList(Array.from(matkulSet));
+
+      // Urutkan data
+      if (sortBy === "deadline") {
+        docs = docs.sort((a, b) => {
+          // Urut berdasarkan due_date + jam ascending
+          if (!a.due_date) return 1;
+          if (!b.due_date) return -1;
+          return new Date(a.due_date) - new Date(b.due_date);
+        });
+      } else if (sortBy === "baru") {
+        // Urut terbaru berdasarkan waktu dibuat (asumsikan ada $createdAt)
+        // Jika tidak ada, pakai fallback tanggal deadline descending
+        docs = docs.sort((a, b) => {
+          if (a.$createdAt && b.$createdAt) {
+            return new Date(b.$createdAt) - new Date(a.$createdAt);
+          }
+          // fallback:
+          if (!a.due_date) return 1;
+          if (!b.due_date) return -1;
+          return new Date(b.due_date) - new Date(a.due_date);
+        });
+      }
+
+      setTugas(docs);
       setLoading(false);
+      setPage(1); // reset page saat data baru
     } catch (err) {
       setError(err.message || "Gagal ambil data tugas");
       setLoading(false);
@@ -51,14 +108,33 @@ export default function Tugas() {
 
   useEffect(() => {
     fetchTugas();
-  }, []);
+  }, [sortBy]);
 
   function handleChange(e) {
     const { name, value } = e.target;
-    setFormData((prev) => ({ 
-      ...prev, 
-      [name]: name === 'status_code' ? Number(value) : value 
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "status_code" ? Number(value) : value,
     }));
+  }
+
+  // Saat pilih matkul dari dropdown
+  function handleMatkulSelect(e) {
+    const val = e.target.value;
+    if (val === "__new__") {
+      // user ingin tambah matkul baru
+      setFormData((prev) => ({
+        ...prev,
+        matkul: "",
+        matkulBaru: "",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        matkul: val,
+        matkulBaru: "",
+      }));
+    }
   }
 
   async function handleSubmit(e) {
@@ -76,24 +152,51 @@ export default function Tugas() {
       return;
     }
 
+    // Tentukan nilai matkul yang akan disimpan
+    let matkulToSave = formData.matkul;
+    if (formData.matkulBaru.trim()) {
+      matkulToSave = formData.matkulBaru.trim();
+      if (!matkulList.includes(matkulToSave)) {
+        setMatkulList((prev) => [...prev, matkulToSave]);
+      }
+    }
+
     const payload = {
       title: formData.title.trim(),
       description: formData.description.trim(),
       due_date: formData.due_date,
       status_code: Number(formData.status_code),
+      matkul: matkulToSave,
     };
 
     try {
       if (isValidDocumentId(formData.$id)) {
-        await databases.updateDocument(databaseId, collectionId, formData.$id, payload);
+        await databases.updateDocument(
+          databaseId,
+          collectionId,
+          formData.$id,
+          payload
+        );
       } else {
-        await databases.createDocument(databaseId, collectionId, ID.unique(), payload);
+        await databases.createDocument(
+          databaseId,
+          collectionId,
+          ID.unique(),
+          payload
+        );
       }
-      
+
       setFormLoading(false);
       setFormVisible(false);
-      setFormData({ $id: null, title: "", description: "", due_date: "", status_code: 0 });
-      setCurrentPage(1);
+      setFormData({
+        $id: null,
+        title: "",
+        description: "",
+        due_date: "",
+        status_code: 0,
+        matkul: "",
+        matkulBaru: "",
+      });
       await fetchTugas();
     } catch (err) {
       alert("Gagal simpan tugas: " + (err.message || err));
@@ -106,8 +209,10 @@ export default function Tugas() {
       $id: t.$id,
       title: t.title || "",
       description: t.description || "",
-      due_date: t.due_date ? t.due_date.split("T")[0] + "T" + (t.due_date.split("T")[1] || "00:00") : "",
+      due_date: t.due_date ? toDatetimeLocal(t.due_date) : "",
       status_code: t.status_code || 0,
+      matkul: t.matkul || "",
+      matkulBaru: "",
     });
     setFormVisible(true);
   }
@@ -123,57 +228,51 @@ export default function Tugas() {
   }
 
   function handleAddNew() {
-    setFormData({ $id: null, title: "", description: "", due_date: "", status_code: 0 });
+    setFormData({
+      $id: null,
+      title: "",
+      description: "",
+      due_date: "",
+      status_code: 0,
+      matkul: "",
+      matkulBaru: "",
+    });
     setFormVisible(true);
   }
 
   function handleCancel() {
     setFormVisible(false);
-    setFormData({ $id: null, title: "", description: "", due_date: "", status_code: 0 });
+    setFormData({
+      $id: null,
+      title: "",
+      description: "",
+      due_date: "",
+      status_code: 0,
+      matkul: "",
+      matkulBaru: "",
+    });
   }
 
-  function getSortedTugas() {
-    const tugasCopy = [...tugas];
-    if (sortBy === "deadline") {
-      return tugasCopy.sort((a, b) => {
-        if (!a.due_date) return 1;
-        if (!b.due_date) return -1;
-        return new Date(a.due_date) - new Date(b.due_date);
-      });
-    } else if (sortBy === "newest") {
-      return tugasCopy.sort((a, b) => {
-        if (!a.$createdAt) return 1;
-        if (!b.$createdAt) return -1;
-        return new Date(b.$createdAt) - new Date(a.$createdAt);
-      });
-    }
-    return tugasCopy;
-  }
-
-  const sortedTugas = getSortedTugas();
-  const totalPages = Math.ceil(sortedTugas.length / itemsPerPage);
-  const pagedTugas = sortedTugas.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Pagination: hitung data untuk page sekarang
+  const startIdx = (page - 1) * PAGE_SIZE;
+  const pagedTugas = tugas.slice(startIdx, startIdx + PAGE_SIZE);
+  const totalPages = Math.ceil(tugas.length / PAGE_SIZE);
 
   const fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-
-  const tableStyle = { 
-    width: "100%", 
-    borderCollapse: "collapse", 
-    marginTop: 20, 
+  const tableStyle = {
+    width: "100%",
+    borderCollapse: "collapse",
+    marginTop: 20,
     fontFamily,
     boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
     borderRadius: 8,
     overflow: "hidden",
   };
-  const thtdStyle = { 
-    padding: 12, 
-    textAlign: "left", 
+  const thtdStyle = {
+    padding: 12,
+    textAlign: "left",
     borderBottom: "1px solid #eee",
     color: "#333",
-    transition: "background-color 0.3s ease",
   };
   const thStyle = {
     backgroundColor: "#FF7F50",
@@ -189,7 +288,6 @@ export default function Tugas() {
     fontWeight: "600",
     fontFamily,
     transition: "all 0.3s ease",
-    position: "relative",
   };
   const addBtnStyle = {
     ...btnStyle,
@@ -210,7 +308,6 @@ export default function Tugas() {
     color: "white",
     boxShadow: "0 3px 6px rgba(244,67,54,0.4)",
   };
-
   const formStyle = {
     marginTop: 20,
     padding: 24,
@@ -220,7 +317,6 @@ export default function Tugas() {
     fontFamily,
     color: "white",
   };
-
   const inputStyle = {
     width: "100%",
     padding: "10px 12px",
@@ -231,99 +327,53 @@ export default function Tugas() {
     fontSize: 16,
     fontFamily,
     boxSizing: "border-box",
-    transition: "border-color 0.3s ease",
   };
-
   const textareaStyle = {
     ...inputStyle,
     resize: "vertical",
     minHeight: 80,
   };
-
   const labelStyle = {
     fontWeight: "600",
     fontSize: 14,
     display: "block",
   };
 
-  // Tooltip CSS in JS style
-  const tooltipStyle = {
-    position: "absolute",
-    bottom: "125%",
-    left: "50%",
-    transform: "translateX(-50%)",
-    backgroundColor: "#333",
-    color: "#fff",
-    padding: "4px 8px",
-    borderRadius: 4,
-    fontSize: 12,
-    whiteSpace: "nowrap",
-    opacity: 0,
-    pointerEvents: "none",
-    transition: "opacity 0.3s ease",
-    zIndex: 1000,
-  };
-
-  // Wrapper untuk tombol dengan tooltip
-  function ButtonWithTooltip({ style, onClick, children, tooltip, disabled }) {
-    const [hover, setHover] = useState(false);
-    return (
-      <div 
-        style={{ position: "relative", display: "inline-block" }}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-      >
-        <button
-          style={{ ...style, opacity: disabled ? 0.6 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
-          onClick={disabled ? undefined : onClick}
-          disabled={disabled}
-        >
-          {children}
-        </button>
-        <div style={{ ...tooltipStyle, opacity: hover ? 1 : 0 }}>
-          {tooltip}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={{ padding: 24, fontFamily }}>
       <h1 style={{ color: "#FF7F50", marginBottom: 16 }}>Daftar Tugas</h1>
 
-      <div style={{ marginBottom: 16 }}>
-        <label htmlFor="sortBy" style={{ marginRight: 8, fontWeight: "600" }}>
+      <div style={{ marginBottom: 12 }}>
+        <label htmlFor="sortSelect" style={{ marginRight: 8, fontWeight: "600" }}>
           Urutkan berdasarkan:
         </label>
         <select
-          id="sortBy"
+          id="sortSelect"
           value={sortBy}
-          onChange={e => { setSortBy(e.target.value); setCurrentPage(1); }}
-          style={{ padding: 8, borderRadius: 6, fontSize: 16, border: "1px solid #ccc", transition: "border-color 0.3s ease" }}
-          onFocus={e => e.target.style.borderColor = "#FF7F50"}
-          onBlur={e => e.target.style.borderColor = "#ccc"}
+          onChange={(e) => setSortBy(e.target.value)}
+          style={{ padding: "6px 10px", fontSize: 16, borderRadius: 6, border: "1px solid #ccc" }}
+          disabled={loading}
         >
-          <option value="deadline">Deadline Tercepat</option>
-          <option value="newest">Tugas Terbaru</option>
+          <option value="deadline">Deadline Terdekat</option>
+          <option value="baru">Tugas Terbaru</option>
         </select>
       </div>
 
       <button
-        style={{ ...addBtnStyle, marginBottom: 24 }}
+        style={{ ...addBtnStyle, marginTop: 12 }}
         onClick={handleAddNew}
         disabled={formLoading}
-        onMouseEnter={e => e.currentTarget.style.filter = "brightness(110%)"}
-        onMouseLeave={e => e.currentTarget.style.filter = "brightness(100%)"}
       >
         {formLoading ? "Loading..." : "Tambah Tugas"}
       </button>
 
-      {loading && <p>Loading tugas...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      {!loading && !error && tugas.length === 0 && <p>Tidak ada tugas.</p>}
-
-      {!loading && !error && tugas.length > 0 && (
+      {loading ? (
+        <p>Loading data tugas...</p>
+      ) : error ? (
+        <p style={{ color: "red" }}>{error}</p>
+      ) : tugas.length === 0 ? (
+        <p style={{ color: "#666" }}>Tidak ada tugas.</p>
+      ) : (
         <>
           <table style={tableStyle}>
             <thead>
@@ -331,102 +381,87 @@ export default function Tugas() {
                 <th style={{ ...thtdStyle, ...thStyle, width: 50 }}>No.</th>
                 <th style={{ ...thtdStyle, ...thStyle }}>Judul</th>
                 <th style={{ ...thtdStyle, ...thStyle }}>Deskripsi</th>
-                <th style={{ ...thtdStyle, ...thStyle }}>Deadline</th>
-                <th style={{ ...thtdStyle, ...thStyle }}>Status</th>
-                <th style={{ ...thtdStyle, ...thStyle, width: 160 }}>Aksi</th>
+                <th style={{ ...thtdStyle, ...thStyle, width: 160 }}>Deadline</th>
+                <th style={{ ...thtdStyle, ...thStyle, width: 130 }}>Status</th>
+                <th style={{ ...thtdStyle, ...thStyle }}>Mata Kuliah</th>
+                <th style={{ ...thtdStyle, ...thStyle, width: 140 }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {pagedTugas.map((t, index) => (
-                <tr 
-                  key={t.$id} 
-                  style={{ 
-                    backgroundColor: "white",
-                    transition: "background-color 0.3s ease",
-                    cursor: "default"
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = "#FFF3E0"}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = "white"}
-                >
-                  <td style={thtdStyle}>{(currentPage -1) * itemsPerPage + index + 1}</td>
+              {pagedTugas.map((t, i) => (
+                <tr key={t.$id} style={{ backgroundColor: "white" }}>
+                  <td style={thtdStyle}>{startIdx + i + 1}</td>
                   <td style={thtdStyle}>{t.title}</td>
                   <td style={thtdStyle}>{t.description}</td>
                   <td style={thtdStyle}>
-                    {t.due_date 
-                      ? new Date(t.due_date).toLocaleString(undefined, {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }) 
+                    {t.due_date
+                      ? new Date(t.due_date).toLocaleDateString() +
+                        " " +
+                        new Date(t.due_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                       : "-"}
                   </td>
                   <td style={thtdStyle}>{statusMapping[t.status_code] ?? "Unknown"}</td>
+                  <td style={thtdStyle}>{t.matkul || "-"}</td>
                   <td style={thtdStyle}>
-                    <ButtonWithTooltip 
-                      style={editBtnStyle} 
-                      onClick={() => handleEdit(t)} 
-                      tooltip="Edit tugas"
+                    <button
+                      style={editBtnStyle}
+                      onClick={() => handleEdit(t)}
                       disabled={formLoading}
                     >
                       Edit
-                    </ButtonWithTooltip>
-                    <ButtonWithTooltip 
-                      style={delBtnStyle} 
-                      onClick={() => handleDelete(t.$id)} 
-                      tooltip="Hapus tugas"
+                    </button>
+                    <button
+                      style={delBtnStyle}
+                      onClick={() => handleDelete(t.$id)}
                       disabled={formLoading}
                     >
                       Hapus
-                    </ButtonWithTooltip>
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 12 }}>
-            <button
-              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div
               style={{
-                padding: "8px 16px",
-                borderRadius: 6,
-                border: "none",
-                cursor: currentPage === 1 ? "not-allowed" : "pointer",
-                backgroundColor: currentPage === 1 ? "#ccc" : "#FF7F50",
-                color: "white",
-                fontWeight: "600",
-                transition: "all 0.3s ease"
+                marginTop: 12,
+                display: "flex",
+                justifyContent: "center",
+                gap: 12,
               }}
-              onMouseEnter={e => { if(currentPage !==1) e.currentTarget.style.filter = "brightness(110%)"}}
-              onMouseLeave={e => { if(currentPage !==1) e.currentTarget.style.filter = "brightness(100%)"}}
             >
-              Prev
-            </button>
-            <span style={{ alignSelf: "center", fontWeight: "600" }}>
-              {currentPage} / {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              style={{
-                padding: "8px 16px",
-                borderRadius: 6,
-                border: "none",
-                cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-                backgroundColor: currentPage === totalPages ? "#ccc" : "#FF7F50",
-                color: "white",
-                fontWeight: "600",
-                transition: "all 0.3s ease"
-              }}
-              onMouseEnter={e => { if(currentPage !==totalPages) e.currentTarget.style.filter = "brightness(110%)"}}
-              onMouseLeave={e => { if(currentPage !==totalPages) e.currentTarget.style.filter = "brightness(100%)"}}
-            >
-              Next
-            </button>
-          </div>
+              <button
+                style={{
+                  ...btnStyle,
+                  backgroundColor: page === 1 ? "#ccc" : "#FF7F50",
+                  color: page === 1 ? "#666" : "white",
+                  cursor: page === 1 ? "default" : "pointer",
+                }}
+                disabled={page === 1}
+                onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              >
+                Prev
+              </button>
+              <span style={{ alignSelf: "center", fontWeight: "600" }}>
+                Halaman {page} dari {totalPages}
+              </span>
+              <button
+                style={{
+                  ...btnStyle,
+                  backgroundColor: page === totalPages ? "#ccc" : "#FF7F50",
+                  color: page === totalPages ? "#666" : "white",
+                  cursor: page === totalPages ? "default" : "pointer",
+                }}
+                disabled={page === totalPages}
+                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -435,7 +470,7 @@ export default function Tugas() {
           <h2 style={{ marginBottom: 24, fontWeight: "700" }}>
             {formData.$id ? "Edit Tugas" : "Tambah Tugas"}
           </h2>
-          
+
           <label style={labelStyle}>
             Judul:
             <input
@@ -448,11 +483,9 @@ export default function Tugas() {
               disabled={formLoading}
               placeholder="Masukkan judul tugas"
               autoComplete="off"
-              onFocus={e => e.target.style.borderColor = "#fff"}
-              onBlur={e => e.target.style.borderColor = "transparent"}
             />
           </label>
-          
+
           <label style={labelStyle}>
             Deskripsi:
             <textarea
@@ -463,13 +496,11 @@ export default function Tugas() {
               style={textareaStyle}
               disabled={formLoading}
               placeholder="Masukkan deskripsi tugas"
-              onFocus={e => e.target.style.borderColor = "#fff"}
-              onBlur={e => e.target.style.borderColor = "transparent"}
             />
           </label>
-          
+
           <label style={labelStyle}>
-            Deadline:
+            Deadline: ( ditambah 7 jam dari waktu normal )
             <input
               type="datetime-local"
               name="due_date"
@@ -478,11 +509,9 @@ export default function Tugas() {
               required
               disabled={formLoading}
               style={inputStyle}
-              onFocus={e => e.target.style.borderColor = "#fff"}
-              onBlur={e => e.target.style.borderColor = "transparent"}
             />
           </label>
-          
+
           <label style={labelStyle}>
             Status:
             <select
@@ -491,8 +520,6 @@ export default function Tugas() {
               onChange={handleChange}
               disabled={formLoading}
               style={inputStyle}
-              onFocus={e => e.target.style.borderColor = "#fff"}
-              onBlur={e => e.target.style.borderColor = "transparent"}
             >
               {Object.entries(statusMapping).map(([key, val]) => (
                 <option key={key} value={key}>
@@ -501,50 +528,69 @@ export default function Tugas() {
               ))}
             </select>
           </label>
-          
-          <button 
-            type="submit" 
-            disabled={formLoading} 
+
+          {/* Pilihan Mata Kuliah */}
+          <label style={labelStyle}>
+            Mata Kuliah:
+            <select
+              name="matkul"
+              value={formData.matkul || "__new__"}
+              onChange={handleMatkulSelect}
+              disabled={formLoading}
+              style={inputStyle}
+            >
+              <option value="">-- Pilih Mata Kuliah --</option>
+              {matkulList.map((mk) => (
+                <option key={mk} value={mk}>
+                  {mk}
+                </option>
+              ))}
+              <option value="__new__">Tambah mata kuliah baru...</option>
+            </select>
+          </label>
+
+          {/* Input matkul baru jika pilih Tambah */}
+          {formData.matkul === "" && (
+            <label style={labelStyle}>
+              Mata Kuliah Baru:
+              <input
+                type="text"
+                name="matkulBaru"
+                value={formData.matkulBaru}
+                onChange={handleChange}
+                disabled={formLoading}
+                placeholder="Masukkan nama mata kuliah baru"
+                style={inputStyle}
+              />
+            </label>
+          )}
+
+          <button
+            type="submit"
+            disabled={formLoading}
             style={{
-              padding: "12px",
-              width: "100%", 
-              borderRadius: 8,
-              backgroundColor: "#FF7F50",
-              color: "white",
+              ...addBtnStyle,
+              width: "100%",
+              marginBottom: 12,
               fontWeight: "700",
               fontSize: 16,
-              cursor: "pointer",
-              boxShadow: "0 4px 8px rgba(255,127,80,0.4)",
-              border: "none",
-              transition: "all 0.3s ease",
-              marginBottom: 12,
             }}
-            onMouseEnter={e => e.currentTarget.style.filter = "brightness(110%)"}
-            onMouseLeave={e => e.currentTarget.style.filter = "brightness(100%)"}
           >
             {formLoading ? "Menyimpan..." : "Simpan"}
           </button>
-          
+
           <button
             type="button"
             onClick={handleCancel}
             disabled={formLoading}
             style={{
-              padding: "12px",
-              width: "100%", 
-              borderRadius: 8,
+              ...delBtnStyle,
+              width: "100%",
               backgroundColor: "#555",
-              color: "white",
               fontWeight: "700",
               fontSize: 16,
-              cursor: "pointer",
               boxShadow: "none",
-              border: "none",
-              marginTop: 8,
-              transition: "all 0.3s ease",
             }}
-            onMouseEnter={e => e.currentTarget.style.filter = "brightness(110%)"}
-            onMouseLeave={e => e.currentTarget.style.filter = "brightness(100%)"}
           >
             Batal
           </button>
