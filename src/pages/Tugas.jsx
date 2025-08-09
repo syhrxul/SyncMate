@@ -25,10 +25,7 @@ export default function Tugas() {
   });
   const [formLoading, setFormLoading] = useState(false);
 
-  // Sorting: 'deadline' atau 'newest'
   const [sortBy, setSortBy] = useState("deadline");
-
-  // Pagination
   const itemsPerPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -96,7 +93,7 @@ export default function Tugas() {
       setFormLoading(false);
       setFormVisible(false);
       setFormData({ $id: null, title: "", description: "", due_date: "", status_code: 0 });
-      setCurrentPage(1); // reset halaman ke awal setelah update
+      setCurrentPage(1);
       await fetchTugas();
     } catch (err) {
       alert("Gagal simpan tugas: " + (err.message || err));
@@ -135,7 +132,6 @@ export default function Tugas() {
     setFormData({ $id: null, title: "", description: "", due_date: "", status_code: 0 });
   }
 
-  // Urutkan tugas sesuai sortBy
   function getSortedTugas() {
     const tugasCopy = [...tugas];
     if (sortBy === "deadline") {
@@ -145,7 +141,6 @@ export default function Tugas() {
         return new Date(a.due_date) - new Date(b.due_date);
       });
     } else if (sortBy === "newest") {
-      // Urut berdasarkan waktu buat, properti $createdAt ada di dokumen Appwrite
       return tugasCopy.sort((a, b) => {
         if (!a.$createdAt) return 1;
         if (!b.$createdAt) return -1;
@@ -155,7 +150,6 @@ export default function Tugas() {
     return tugasCopy;
   }
 
-  // Pagination - hitung data yang akan ditampilkan di halaman sekarang
   const sortedTugas = getSortedTugas();
   const totalPages = Math.ceil(sortedTugas.length / itemsPerPage);
   const pagedTugas = sortedTugas.slice(
@@ -163,7 +157,6 @@ export default function Tugas() {
     currentPage * itemsPerPage
   );
 
-  // Styles singkat
   const fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 
   const tableStyle = { 
@@ -180,6 +173,7 @@ export default function Tugas() {
     textAlign: "left", 
     borderBottom: "1px solid #eee",
     color: "#333",
+    transition: "background-color 0.3s ease",
   };
   const thStyle = {
     backgroundColor: "#FF7F50",
@@ -195,6 +189,7 @@ export default function Tugas() {
     fontWeight: "600",
     fontFamily,
     transition: "all 0.3s ease",
+    position: "relative",
   };
   const addBtnStyle = {
     ...btnStyle,
@@ -236,6 +231,7 @@ export default function Tugas() {
     fontSize: 16,
     fontFamily,
     boxSizing: "border-box",
+    transition: "border-color 0.3s ease",
   };
 
   const textareaStyle = {
@@ -250,11 +246,51 @@ export default function Tugas() {
     display: "block",
   };
 
+  // Tooltip CSS in JS style
+  const tooltipStyle = {
+    position: "absolute",
+    bottom: "125%",
+    left: "50%",
+    transform: "translateX(-50%)",
+    backgroundColor: "#333",
+    color: "#fff",
+    padding: "4px 8px",
+    borderRadius: 4,
+    fontSize: 12,
+    whiteSpace: "nowrap",
+    opacity: 0,
+    pointerEvents: "none",
+    transition: "opacity 0.3s ease",
+    zIndex: 1000,
+  };
+
+  // Wrapper untuk tombol dengan tooltip
+  function ButtonWithTooltip({ style, onClick, children, tooltip, disabled }) {
+    const [hover, setHover] = useState(false);
+    return (
+      <div 
+        style={{ position: "relative", display: "inline-block" }}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+      >
+        <button
+          style={{ ...style, opacity: disabled ? 0.6 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
+          onClick={disabled ? undefined : onClick}
+          disabled={disabled}
+        >
+          {children}
+        </button>
+        <div style={{ ...tooltipStyle, opacity: hover ? 1 : 0 }}>
+          {tooltip}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: 24, fontFamily }}>
       <h1 style={{ color: "#FF7F50", marginBottom: 16 }}>Daftar Tugas</h1>
 
-      {/* Pilih sort */}
       <div style={{ marginBottom: 16 }}>
         <label htmlFor="sortBy" style={{ marginRight: 8, fontWeight: "600" }}>
           Urutkan berdasarkan:
@@ -263,7 +299,9 @@ export default function Tugas() {
           id="sortBy"
           value={sortBy}
           onChange={e => { setSortBy(e.target.value); setCurrentPage(1); }}
-          style={{ padding: 8, borderRadius: 6, fontSize: 16 }}
+          style={{ padding: 8, borderRadius: 6, fontSize: 16, border: "1px solid #ccc", transition: "border-color 0.3s ease" }}
+          onFocus={e => e.target.style.borderColor = "#FF7F50"}
+          onBlur={e => e.target.style.borderColor = "#ccc"}
         >
           <option value="deadline">Deadline Tercepat</option>
           <option value="newest">Tugas Terbaru</option>
@@ -290,16 +328,27 @@ export default function Tugas() {
           <table style={tableStyle}>
             <thead>
               <tr>
+                <th style={{ ...thtdStyle, ...thStyle, width: 50 }}>No.</th>
                 <th style={{ ...thtdStyle, ...thStyle }}>Judul</th>
                 <th style={{ ...thtdStyle, ...thStyle }}>Deskripsi</th>
                 <th style={{ ...thtdStyle, ...thStyle }}>Deadline</th>
                 <th style={{ ...thtdStyle, ...thStyle }}>Status</th>
-                <th style={{ ...thtdStyle, ...thStyle }}>Aksi</th>
+                <th style={{ ...thtdStyle, ...thStyle, width: 160 }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {pagedTugas.map((t) => (
-                <tr key={t.$id} style={{ backgroundColor: "white" }}>
+              {pagedTugas.map((t, index) => (
+                <tr 
+                  key={t.$id} 
+                  style={{ 
+                    backgroundColor: "white",
+                    transition: "background-color 0.3s ease",
+                    cursor: "default"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = "#FFF3E0"}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = "white"}
+                >
+                  <td style={thtdStyle}>{(currentPage -1) * itemsPerPage + index + 1}</td>
                   <td style={thtdStyle}>{t.title}</td>
                   <td style={thtdStyle}>{t.description}</td>
                   <td style={thtdStyle}>
@@ -315,31 +364,28 @@ export default function Tugas() {
                   </td>
                   <td style={thtdStyle}>{statusMapping[t.status_code] ?? "Unknown"}</td>
                   <td style={thtdStyle}>
-                    <button 
+                    <ButtonWithTooltip 
                       style={editBtnStyle} 
                       onClick={() => handleEdit(t)} 
+                      tooltip="Edit tugas"
                       disabled={formLoading}
-                      onMouseEnter={e => e.currentTarget.style.filter = "brightness(110%)"}
-                      onMouseLeave={e => e.currentTarget.style.filter = "brightness(100%)"}
                     >
                       Edit
-                    </button>
-                    <button 
+                    </ButtonWithTooltip>
+                    <ButtonWithTooltip 
                       style={delBtnStyle} 
                       onClick={() => handleDelete(t.$id)} 
+                      tooltip="Hapus tugas"
                       disabled={formLoading}
-                      onMouseEnter={e => e.currentTarget.style.filter = "brightness(110%)"}
-                      onMouseLeave={e => e.currentTarget.style.filter = "brightness(100%)"}
                     >
                       Hapus
-                    </button>
+                    </ButtonWithTooltip>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          {/* Pagination Controls */}
           <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 12 }}>
             <button
               onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
@@ -385,20 +431,12 @@ export default function Tugas() {
       )}
 
       {formVisible && (
-        <form style={{
-          marginTop: 20,
-          padding: 24,
-          borderRadius: 12,
-          background: "linear-gradient(135deg, #ffaf7b, #ff7f50)",
-          boxShadow: "0 8px 20px rgba(255,127,80,0.4)",
-          fontFamily,
-          color: "white",
-        }} onSubmit={handleSubmit} noValidate>
+        <form style={formStyle} onSubmit={handleSubmit} noValidate>
           <h2 style={{ marginBottom: 24, fontWeight: "700" }}>
             {formData.$id ? "Edit Tugas" : "Tambah Tugas"}
           </h2>
           
-          <label style={{ fontWeight: "600", fontSize: 14, display: "block" }}>
+          <label style={labelStyle}>
             Judul:
             <input
               type="text"
@@ -406,49 +444,31 @@ export default function Tugas() {
               value={formData.title}
               onChange={handleChange}
               required
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                marginTop: 6,
-                marginBottom: 16,
-                borderRadius: 8,
-                border: "none",
-                fontSize: 16,
-                fontFamily,
-                boxSizing: "border-box",
-              }}
+              style={inputStyle}
               disabled={formLoading}
               placeholder="Masukkan judul tugas"
               autoComplete="off"
+              onFocus={e => e.target.style.borderColor = "#fff"}
+              onBlur={e => e.target.style.borderColor = "transparent"}
             />
           </label>
           
-          <label style={{ fontWeight: "600", fontSize: 14, display: "block" }}>
+          <label style={labelStyle}>
             Deskripsi:
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
               rows={4}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                marginTop: 6,
-                marginBottom: 16,
-                borderRadius: 8,
-                border: "none",
-                fontSize: 16,
-                fontFamily,
-                boxSizing: "border-box",
-                resize: "vertical",
-                minHeight: 80,
-              }}
+              style={textareaStyle}
               disabled={formLoading}
               placeholder="Masukkan deskripsi tugas"
+              onFocus={e => e.target.style.borderColor = "#fff"}
+              onBlur={e => e.target.style.borderColor = "transparent"}
             />
           </label>
           
-          <label style={{ fontWeight: "600", fontSize: 14, display: "block" }}>
+          <label style={labelStyle}>
             Deadline:
             <input
               type="datetime-local"
@@ -457,38 +477,22 @@ export default function Tugas() {
               onChange={handleChange}
               required
               disabled={formLoading}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                marginTop: 6,
-                marginBottom: 16,
-                borderRadius: 8,
-                border: "none",
-                fontSize: 16,
-                fontFamily,
-                boxSizing: "border-box",
-              }}
+              style={inputStyle}
+              onFocus={e => e.target.style.borderColor = "#fff"}
+              onBlur={e => e.target.style.borderColor = "transparent"}
             />
           </label>
           
-          <label style={{ fontWeight: "600", fontSize: 14, display: "block" }}>
+          <label style={labelStyle}>
             Status:
             <select
               name="status_code"
               value={formData.status_code}
               onChange={handleChange}
               disabled={formLoading}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                marginTop: 6,
-                marginBottom: 16,
-                borderRadius: 8,
-                border: "none",
-                fontSize: 16,
-                fontFamily,
-                boxSizing: "border-box",
-              }}
+              style={inputStyle}
+              onFocus={e => e.target.style.borderColor = "#fff"}
+              onBlur={e => e.target.style.borderColor = "transparent"}
             >
               {Object.entries(statusMapping).map(([key, val]) => (
                 <option key={key} value={key}>
@@ -513,6 +517,7 @@ export default function Tugas() {
               boxShadow: "0 4px 8px rgba(255,127,80,0.4)",
               border: "none",
               transition: "all 0.3s ease",
+              marginBottom: 12,
             }}
             onMouseEnter={e => e.currentTarget.style.filter = "brightness(110%)"}
             onMouseLeave={e => e.currentTarget.style.filter = "brightness(100%)"}
