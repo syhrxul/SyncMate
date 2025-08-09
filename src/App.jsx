@@ -4,8 +4,7 @@ import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import InputData from "./pages/InputData";
 import Laporan from "./pages/Laporan";
-import TugasTerdekat from "./pages/TugasTerdekat";
-import RiwayatTugas from "./pages/RiwayatTugas";
+import TugasTerdekat from "./pages/Tugas";
 import Nilai from "./pages/Nilai";
 import Jadwal from "./pages/Jadwal";
 import Kegiatan from "./pages/Kegiatan";
@@ -20,8 +19,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/input" element={<InputData />} />
           <Route path="/laporan" element={<Laporan />} />
-          <Route path="/tugas-terdekat" element={<TugasTerdekat />} />
-          <Route path="/riwayat-tugas" element={<RiwayatTugas />} />
+          <Route path="/tugas" element={<TugasTerdekat />} />
           <Route path="/nilai" element={<Nilai />} />
           <Route path="/jadwal" element={<Jadwal />} />
           <Route path="/kegiatan" element={<Kegiatan />} />

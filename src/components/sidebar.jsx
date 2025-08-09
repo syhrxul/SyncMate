@@ -27,8 +27,7 @@ const menuItems = [
     label: "Kuliah",
     icon: <FaBook />,
     submenu: [
-      { id: "tugas_terdekat", label: "Tugas Terdekat", path: "/tugas-terdekat" },
-      { id: "riwayat_tugas", label: "Riwayat Tugas", path: "/riwayat-tugas" },
+      { id: "tugas", label: "Tugas", path: "/tugas" },
       { id: "nilai", label: "Nilai", path: "/nilai" },
       { id: "jadwal", label: "Jadwal", path: "/jadwal" },
     ],

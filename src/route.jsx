@@ -1,8 +1,7 @@
 import Dashboard from "./pages/Dashboard";
 import InputData from "./pages/InputData";
 import Laporan from "./pages/Laporan";
-import TugasTerdekat from "./pages/TugasTerdekat";
-import RiwayatTugas from "./pages/RiwayatTugas";
+import Tugas from "./pages/Tugas";
 import Nilai from "./pages/Nilai";
 import Jadwal from "./pages/Jadwal";
 import Kegiatan from "./pages/Kegiatan";
@@ -28,16 +27,10 @@ const routes = [
     Component: Laporan,
   },
   {
-    id: "tugas_terdekat",
-    path: "/tugas-terdekat",
-    label: "Tugas Terdekat",
-    Component: TugasTerdekat,
-  },
-  {
-    id: "riwayat_tugas",
-    path: "/riwayat-tugas",
-    label: "Riwayat Tugas",
-    Component: RiwayatTugas,
+    id: "tugas",
+    path: "/tugas",
+    label: "Tugas",
+    Component: Tugas,
   },
   {
     id: "nilai",
