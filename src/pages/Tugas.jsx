@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { databases, ID } from "../lib/appwrite";
-import { form } from "framer-motion/client";
 
 const databaseId = "6897a656003536fecb03";
 const collectionId = "6897a65e0030c01af6e7";
@@ -69,7 +68,7 @@ export default function Tugas() {
     return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
   }
 
-  async function fetchTugas() {
+  const fetchTugas = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -119,11 +118,11 @@ export default function Tugas() {
       setError(err.message || "Gagal ambil data tugas");
       setLoading(false);
     }
-  }
+  }, [sortBy]);
 
   useEffect(() => {
     fetchTugas();
-  }, [sortBy]);
+  }, [fetchTugas]);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -230,7 +229,7 @@ export default function Tugas() {
     const payload = {
       title: formData.title.trim(),
       description: formData.description.trim(),
-      due_date: formData.due_date,
+      due_date: new Date(formData.due_date).toISOString(),
       status_code: Number(formData.status_code),
       matkul: matkulToSave,
       nilai: formData.status_code === 2 ? formData.nilai.trim() : "",
@@ -594,9 +593,7 @@ export default function Tugas() {
           </label>
 
           <label style={labelStyle}>
-            Deadline: <span style={{ opacity: 0.6, fontWeight: "normal" }}>
-              (dikurangi 7 jam sebelum deadline)
-            </span>
+            Deadline:
             <input
               type="datetime-local"
               name="due_date"
