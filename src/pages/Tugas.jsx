@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { databases, ID } from "../lib/appwrite";
+import { form } from "framer-motion/client";
 
 const databaseId = "6897a656003536fecb03";
 const collectionId = "6897a65e0030c01af6e7";
@@ -20,6 +21,7 @@ export default function Tugas() {
   // Daftar mata kuliah dan semester otomatis dari data tugas
   const [matkulList, setMatkulList] = useState([]);
   const [semesterList, setSemesterList] = useState([]);
+  const [sksList, setSksList] = useState([]);
 
   const [formVisible, setFormVisible] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -35,6 +37,8 @@ export default function Tugas() {
     nilai: "",
     semester: "",
     semesterBaru: "",
+    sks: "",
+    sksBaru: "",
   });
 
   // Pilihan urut
@@ -83,6 +87,12 @@ export default function Tugas() {
         docs.map((d) => d.semester).filter(Boolean)
       );
       setSemesterList(Array.from(semesterSet));
+
+      // Update daftar SKS dari tugas yang ada
+      const sksSet = new Set(
+        docs.map((d) => d.sks).filter(Boolean)
+      );
+      setSksList(Array.from(sksSet));
 
       // Urutkan data
       if (sortBy === "deadline") {
@@ -159,6 +169,23 @@ export default function Tugas() {
     }
   }
 
+  function handleSksSelect(e) {
+    const val = e.target.value;
+    if (val === "__new__") {
+      setFormData((prev) => ({
+        ...prev,
+        sks: "",
+        sksBaru: "",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        sks: val,
+        sksBaru: "",
+      }));
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setFormLoading(true);
@@ -192,6 +219,14 @@ export default function Tugas() {
       }
     }
 
+    let sksToSave = formData.sks;
+    if (formData.sksBaru.trim()) {
+      sksToSave = formData.sksBaru.trim();
+      if (!sksList.includes(sksToSave)) {
+        setSksList((prev) => [...prev, sksToSave]);
+      }
+    }
+
     const payload = {
       title: formData.title.trim(),
       description: formData.description.trim(),
@@ -200,6 +235,7 @@ export default function Tugas() {
       matkul: matkulToSave,
       nilai: formData.status_code === 2 ? formData.nilai.trim() : "",
       semester: semesterToSave,
+      sks: sksToSave,
     };
 
     try {
@@ -232,6 +268,8 @@ export default function Tugas() {
         nilai: "",
         semester: "",
         semesterBaru: "",
+        sks: "",
+        sksBaru: "",
       });
       await fetchTugas();
     } catch (err) {
@@ -252,6 +290,8 @@ export default function Tugas() {
       nilai: t.nilai || "",
       semester: t.semester || "",
       semesterBaru: "",
+      sks: t.sks || "",
+      sksBaru: "",
     });
     setFormVisible(true);
   }
@@ -278,6 +318,8 @@ export default function Tugas() {
       nilai: "",
       semester: "",
       semesterBaru: "",
+      sks: "",
+      sksBaru: "",
     });
     setFormVisible(true);
   }
@@ -295,6 +337,8 @@ export default function Tugas() {
       nilai: "",
       semester: "",
       semesterBaru: "",
+      sks: "",
+      sksBaru: "",
     });
   }
 
@@ -448,7 +492,10 @@ export default function Tugas() {
                       : "-"}
                   </td>
                   <td style={thtdStyle}>{statusMapping[t.status_code] ?? "Unknown"}</td>
-                  <td style={thtdStyle}>{t.matkul || "-"}</td>
+                  <td style={thtdStyle}>
+                      {t.matkul ? `${t.matkul} (${t.sks || "-"} SKS)` : "-"}
+                   </td>
+
                   <td style={thtdStyle}>{t.semester || "-"}</td>
                   <td style={thtdStyle}>
                     <button
@@ -547,7 +594,9 @@ export default function Tugas() {
           </label>
 
           <label style={labelStyle}>
-            Deadline:
+            Deadline: <span style={{ opacity: 0.6, fontWeight: "normal" }}>
+              (dikurangi 7 jam sebelum deadline)
+            </span>
             <input
               type="datetime-local"
               name="due_date"
@@ -640,6 +689,41 @@ export default function Tugas() {
                 onChange={handleChange}
                 disabled={formLoading}
                 placeholder="Masukkan nama semester baru"
+                style={inputStyle}
+                autoComplete="off"
+              />
+            </label>
+          )}
+
+          <label style={labelStyle}>
+            SKS:
+            <select
+              name="sks"
+              value={formData.sks || "__new__"}
+              onChange={handleSksSelect}
+              disabled={formLoading}
+              style={inputStyle}
+            >
+              <option value="">-- Pilih SKS --</option>
+              {sksList.map((sks) => (
+                <option key={sks} value={sks}>
+                  {sks}
+                </option>
+              ))}
+              <option value="__new__">Tambah SKS baru...</option>
+            </select>
+          </label>  
+
+          {formData.sks === "" && (
+            <label style={labelStyle}>
+              SKS Baru:
+              <input
+                type="text"
+                name="sksBaru"
+                value={formData.sksBaru}
+                onChange={handleChange}
+                disabled={formLoading}
+                placeholder="Masukkan jumlah SKS baru"
                 style={inputStyle}
                 autoComplete="off"
               />
