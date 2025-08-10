@@ -7,11 +7,11 @@ const collectionId = "689864f7001efb7198d9"; // khusus jadwal
 export default function JadwalKuliah() {
   const [jadwal, setJadwal] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [formVisible, setFormVisible] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
 
   const [formData, setFormData] = useState({
+    $id: null,
     matkul: "",
     tanggal: "",
     jam_mulai: "",
@@ -19,6 +19,7 @@ export default function JadwalKuliah() {
     ruangan: "",
     dosen: "",
     semester: "",
+    sks: "",
   });
 
   const fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
@@ -44,28 +45,57 @@ export default function JadwalKuliah() {
     fontSize: 16,
   };
   const formStyle = {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 8,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
     marginTop: 20,
-    maxWidth: 500,
+    padding: 24,
+    borderRadius: 12,
+    background: "linear-gradient(135deg, #ffaf7b, #ff7f50)",
+    boxShadow: "0 8px 20px rgba(255,127,80,0.4)",
+    fontFamily,
+    color: "white",
   };
-  const labelStyle = { display: "block", marginBottom: 8, fontWeight: "600" };
   const inputStyle = {
     width: "100%",
-    padding: 8,
-    marginTop: 4,
-    marginBottom: 12,
-    border: "1px solid #ccc",
-    borderRadius: 4,
+    padding: "10px 12px",
+    marginTop: 6,
+    marginBottom: 16,
+    borderRadius: 8,
+    border: "none",
+    fontSize: 16,
+    fontFamily,
+    boxSizing: "border-box",
   };
-  const btnStyle = {
+  const labelStyle = {
+    fontWeight: "600",
+    fontSize: 14,
+    display: "block",
+  };
+   const btnStyle = {
     padding: "8px 16px",
     border: "none",
-    borderRadius: 4,
+    borderRadius: 6,
     cursor: "pointer",
     fontWeight: "600",
+    fontFamily,
+    transition: "all 0.3s ease",
+  };
+  const addBtnStyle = {
+    ...btnStyle,
+    backgroundColor: "#FF7F50",
+    color: "white",
+    boxShadow: "0 4px 8px rgba(255,127,80,0.4)",
+  };
+  const editBtnStyle = {
+    ...btnStyle,
+    backgroundColor: "#4caf50",
+    color: "white",
+    marginRight: 8,
+    boxShadow: "0 3px 6px rgba(76,175,80,0.4)",
+  };
+  const delBtnStyle = {
+    ...btnStyle,
+    backgroundColor: "#f44336",
+    color: "white",
+    boxShadow: "0 3px 6px rgba(244,67,54,0.4)",
   };
 
   useEffect(() => {
@@ -77,8 +107,8 @@ export default function JadwalKuliah() {
       setLoading(true);
       const res = await databases.listDocuments(databaseId, collectionId);
       setJadwal(res.documents);
-    } catch (err) {
-      setError("Gagal memuat jadwal");
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -88,35 +118,91 @@ export default function JadwalKuliah() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setFormLoading(true);
+  const handleEdit = (j) => {
+    setFormData({
+      $id: j.$id,
+      matkul: j.matkul || "",
+      dosen: j.dosen || "",
+      tanggal: j.due_date ? new Date(j.due_date).toISOString().split('T')[0] : "",
+      jam_mulai: j.jam_mulai || "",
+      jam_selesai: j.jam_selesai || "",
+      ruangan: j.ruangan || "",
+      semester: j.semester || "",
+      sks: j.sks || "",
+    });
+    setFormVisible(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Yakin ingin menghapus jadwal ini?")) return;
     try {
-      await databases.createDocument(databaseId, collectionId, ID.unique(), {
-        matkul: formData.matkul,
-        due_date: formData.tanggal,
-        jam_mulai: formData.jam_mulai,
-        jam_selesai: formData.jam_selesai,
-        ruangan: formData.ruangan,
-        dosen: formData.dosen,
-        semester: formData.semester,
-      });
-      setFormVisible(false);
-      setFormData({
-        matkul: "",
-        tanggal: "",
-        jam_mulai: "",
-        jam_selesai: "",
-        ruangan: "",
-        dosen: "",
-        semester: "",
-      });
+      await databases.deleteDocument(databaseId, collectionId, id);
       fetchJadwal();
     } catch (err) {
       console.error(err);
+      alert("Gagal menghapus jadwal.");
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setFormLoading(true);
+
+    const payload = {
+      matkul: formData.matkul,
+      due_date: formData.tanggal,
+      jam_mulai: formData.jam_mulai,
+      jam_selesai: formData.jam_selesai,
+      ruangan: formData.ruangan,
+      dosen: formData.dosen,
+      semester: formData.semester,
+      sks: formData.sks,
+    };
+
+    try {
+      if (formData.$id) {
+        await databases.updateDocument(databaseId, collectionId, formData.$id, payload);
+      } else {
+        await databases.createDocument(databaseId, collectionId, ID.unique(), payload);
+      }
+      handleCancel();
+      fetchJadwal();
+    } catch (err) {
+      console.error(err);
+      alert("Gagal menyimpan jadwal.");
     } finally {
       setFormLoading(false);
     }
+  };
+
+  const handleAddNew = () => {
+    setFormData({
+      $id: null,
+      matkul: "",
+      tanggal: "",
+      jam_mulai: "",
+      jam_selesai: "",
+      ruangan: "",
+      dosen: "",
+      semester: "",
+      sks: "",
+    });
+    setFormVisible(true);
+  };
+
+  const handleCancel = () => {
+    setFormVisible(false);
+    setFormData({
+      $id: null,
+      matkul: "",
+      tanggal: "",
+      jam_mulai: "",
+      jam_selesai: "",
+      ruangan: "",
+      dosen: "",
+      semester: "",
+      sks: "",
+    });
   };
 
   return (
@@ -124,19 +210,17 @@ export default function JadwalKuliah() {
       <h1 style={{ color: "#FF7F50", marginBottom: 16 }}>Jadwal Kuliah</h1>
 
       <button
-        onClick={() => setFormVisible(!formVisible)}
-        style={{
-          ...btnStyle,
-          backgroundColor: "#4caf50",
-          color: "white",
-          marginBottom: 16,
-        }}
+        onClick={handleAddNew}
+        style={{ ...addBtnStyle, marginTop: 12 }}
       >
-        {formVisible ? "Tutup Form" : "Tambah Jadwal"}
+        Tambah Jadwal
       </button>
 
       {formVisible && (
         <form style={formStyle} onSubmit={handleSubmit}>
+          <h2 style={{ marginBottom: 24, fontWeight: "700" }}>
+            {formData.$id ? "Edit Jadwal" : "Tambah Jadwal"}
+          </h2>
           <label style={labelStyle}>
             Mata Kuliah:
             <input
@@ -218,7 +302,18 @@ export default function JadwalKuliah() {
             />
           </label>
 
-          <div>
+          <label style={labelStyle}>
+            SKS:
+            <input
+              type="number"
+              name="sks"
+              value={formData.sks}
+              onChange={handleChange}
+              style={inputStyle}
+            />
+          </label>
+
+          <div style={{ marginTop: 20 }}>
             <button
               type="submit"
               disabled={formLoading}
@@ -233,7 +328,7 @@ export default function JadwalKuliah() {
             </button>
             <button
               type="button"
-              onClick={() => setFormVisible(false)}
+              onClick={handleCancel}
               style={{
                 ...btnStyle,
                 backgroundColor: "#f44336",
@@ -248,8 +343,6 @@ export default function JadwalKuliah() {
 
       {loading ? (
         <p>Loading jadwal...</p>
-      ) : error ? (
-        <p style={{ color: "red" }}>{error}</p>
       ) : jadwal.length === 0 ? (
         <p style={{ color: "#666" }}>Tidak ada jadwal kuliah.</p>
       ) : (
@@ -262,7 +355,9 @@ export default function JadwalKuliah() {
               <th style={{ ...thtdStyle, ...thStyle }}>Jam</th>
               <th style={{ ...thtdStyle, ...thStyle }}>Ruangan</th>
               <th style={{ ...thtdStyle, ...thStyle }}>Dosen</th>
-              <th style={{ ...thtdStyle, ...thStyle }}>Semester</th>
+              <th style={{ ...thtdStyle, ...thStyle }}>SKS</th>
+              <th style={{ ...thtdStyle, ...thStyle }}>Smt</th>
+              <th style={{ ...thtdStyle, ...thStyle, width: 140 }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -282,7 +377,24 @@ export default function JadwalKuliah() {
                 </td>
                 <td style={thtdStyle}>{j.ruangan || "-"}</td>
                 <td style={thtdStyle}>{j.dosen || "-"}</td>
+                <td style={thtdStyle}>{j.sks || "-"}</td>
                 <td style={thtdStyle}>{j.semester || "-"}</td>
+                <td style={thtdStyle}>
+                  <button
+                    style={editBtnStyle}
+                    onClick={() => handleEdit(j)}
+                    disabled={formLoading}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    style={delBtnStyle}
+                    onClick={() => handleDelete(j.$id)}
+                    disabled={formLoading}
+                  >
+                    Hapus
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
