@@ -430,7 +430,9 @@ export default function Tugas() {
 
   return (
     <div style={{ padding: 24, fontFamily }}>
-      <h1 style={{ color: "#FF7F50", marginBottom: 16 }}>Daftar Tugas</h1>
+      <h1 style={{ color: "#FF7F50", marginBottom: 20, fontWeight: "bold", fontSize: 28 }}>
+        Daftar Tugas
+      </h1>
 
       <div style={{ marginBottom: 12 }}>
         <label htmlFor="sortSelect" style={{ marginRight: 8, fontWeight: "600" }}>

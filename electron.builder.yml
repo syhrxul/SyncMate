@@ -1,0 +1,75 @@
+appId: com.SyncMate.SyncMate
+productName: SyncMate
+directories:
+  output: release
+  buildResources: assets
+
+files:
+  - dist/**/*
+  - main.js
+  - preload.js
+  - package.json
+  - "!node_modules/**/*"
+
+extraResources:
+  - from: dist
+    to: dist
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: assets/icon.ico
+  publisherName: SyncMate
+  verifyUpdateCodeSignature: false
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  icon: assets/icon.icns
+  category: public.app-category.productivity
+  bundleVersion: 1.0.0
+  minimumSystemVersion: "10.15.0"
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  notarize: false
+
+dmg:
+  title: "${productName} ${version}"
+  icon: assets/icon.icns
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+  window:
+    width: 540
+    height: 380
+  backgroundColor: "#ffffff"
+  iconSize: 100
+  iconTextSize: 14
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  icon: assets/icon.png
+  category: Office
+  synopsis: SyncMate - Productivity App
+  description: A powerful productivity application built with React and Appwrite
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SyncMate
+  uninstallDisplayName: SyncMate
+  license: LICENSE.txt
+
+publish:
+  provider: github
+  releaseType: release

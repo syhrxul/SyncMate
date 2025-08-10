@@ -66,7 +66,9 @@ export default function NilaiPage() {
 
   return (
     <div style={{ padding: 24, fontFamily }}>
-      <h1 style={{ color: "#FF7F50", marginBottom: 16 }}>Daftar Nilai</h1>
+      <h1 style={{ color: "#FF7F50", marginBottom: 20, fontWeight: "bold", fontSize: 28 }}>
+        Daftar Nilai
+      </h1>
 
       <table style={tableStyle}>
         <thead>

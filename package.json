@@ -3,34 +3,139 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "main.js",
+  "homepage": "./",
+  "description": "SyncMate - A React Starter Kit for Appwrite with Electron",
+  "author": "arul syhrulimtkhan@gmail.com",
   "scripts": {
-    "dev": "vite",
+    "dev": "cross-env NODE_ENV=development vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "cross-env NODE_ENV=production electron .",
+    "electron-dev": "cross-env NODE_ENV=development electron .",
+    "electron-debug": "cross-env NODE_ENV=development ELECTRON_DEBUG=true electron .",
+    "electron-build": "npm run build && electron-builder",
+    "electron-build-win": "npm run build && electron-builder --win",
+    "electron-build-mac": "npm run build && electron-builder --mac",
+    "electron-build-mac-cross": "npm run build && electron-builder --mac --x64",
+    "electron-build-linux": "npm run build && electron-builder --linux",
+    "clean": "rm -rf dist release node_modules/.cache",
+    "rebuild": "rm -rf node_modules package-lock.json && npm install"
+  },
+  "build": {
+    "appId": "com.SyncMate.SyncMate",
+    "productName": "SyncMate",
+    "directories": {
+      "output": "release"
+    },
+    "asar": false,
+    "files": [
+      "dist/**/*",
+      "main.js",
+      "preload.js",
+      "package.json",
+      "!node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "dist",
+        "to": "dist"
+      }
+    ],
+    "win": {
+      "target": {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      },
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.productivity",
+      "bundleVersion": "1.0.0",
+      "minimumSystemVersion": "10.15.0",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "icon": "assets/icon.icns",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "Office"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "dependencies": {
     "@appwrite.io/pink-icons": "^1.0.0",
-    "@tailwindcss/vite": "^4.0.14",
     "appwrite": "^18.2.0",
     "framer-motion": "^12.23.12",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-icons": "^5.5.0",
-    "react-router-dom": "^6.30.1",
-    "tailwindcss": "^4.0.14"
+    "react-router-dom": "^6.30.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@tailwindcss/vite": "^4.1.11",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.21",
+    "cross-env": "^10.0.0",
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.19.0",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.18",
     "globals": "^15.14.0",
+    "postcss": "^8.5.6",
     "prettier": "3.5.3",
+    "tailwindcss": "^4.1.11",
+    "terser": "^5.43.1",
     "vite": "^6.1.0"
   }
 }

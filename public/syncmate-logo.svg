@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="titleDesc">
+  <title id="titleDesc">Syncmate logo — two curved arrows forming an S and the word syncmate</title>
+
+  <defs>
+    <!-- magenta -> pink gradient -->
+    <linearGradient id="gMagenta" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff2fa8"/>
+      <stop offset="100%" stop-color="#b02fff"/>
+    </linearGradient>
+
+    <!-- blue -> cyan gradient -->
+    <linearGradient id="gBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e90ff"/>
+      <stop offset="100%" stop-color="#00d2ff"/>
+    </linearGradient>
+
+    <!-- subtle drop shadow -->
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- background (transparent) -->
+  <rect width="100%" height="100%" fill="transparent"/>
+
+  <!-- symbol group centered -->
+  <g transform="translate(512,360)" filter="url(#shadow)">
+    <!-- lower (blue) arrow forming bottom of S -->
+    <path d="
+      M 180 120
+      C 130 220, 20 260, -60 220
+      C -140 180, -170 80, -120 10
+      L -80 32
+      C -110 70, -95 120, -55 140
+      C -15 160, 60 140, 95 80
+      C 130 20, 180 -10, 230 10
+      L 180 120
+      Z"
+      fill="url(#gBlue)" stroke="none" transform="scale(1.0) translate(0,0)" />
+
+    <!-- upper (magenta) arrow forming top of S -->
+    <path d="
+      M -180 -120
+      C -130 -220, -20 -260, 60 -220
+      C 140 -180, 170 -80, 120 -10
+      L 80 -32
+      C 110 -70, 95 -120, 55 -140
+      C 15 -160, -60 -140, -95 -80
+      C -130 -20, -180 10, -230 -10
+      L -180 -120
+      Z"
+      fill="url(#gMagenta)" stroke="none" transform="scale(1.0) translate(0,0)" />
+
+    <!-- subtle inner cutout to emphasize 'S' negative space -->
+    <path d="
+      M -35 130
+      C 10 90, 60 92, 95 48
+      C 130 4, 110 -36, 74 -68
+      C 38 -100, -22 -100, -66 -64
+      C -110 -28, -110 24, -72 70
+      C -34 116, 20 122, 62 86
+      C 104 50, 70 190, -35 130
+      Z"
+      fill="white" opacity="0.07" />
+
+  </g>
+
+  <!-- Brand text centered below symbol -->
+  <g transform="translate(0,720)">
+    <!-- use a sans-serif fallback; consumer apps may substitute their own fonts -->
+    <text x="50%" y="0" font-family="Inter, Arial, Helvetica, sans-serif"
+          font-weight="700" font-size="88" fill="#0A0A0A" text-anchor="middle" letter-spacing="-1">
+      syncmate
+    </text>
+  </g>
+</svg>
