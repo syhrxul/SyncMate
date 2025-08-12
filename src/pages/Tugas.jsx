@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { databases, ID } from "../lib/appwrite";
+import Tabel from "../components/Tabel";
+import TombolAksi from "../components/TombolAksi";
 
 const databaseId = "6897a656003536fecb03";
 const collectionId = "6897a65e0030c01af6e7";
@@ -348,27 +350,6 @@ export default function Tugas() {
 
   // Styles (sama seperti kode aslinya)
   const fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-  const tableStyle = {
-    width: "100%",
-    borderCollapse: "collapse",
-    marginTop: 20,
-    fontFamily,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-    borderRadius: 8,
-    overflow: "hidden",
-  };
-  const thtdStyle = {
-    padding: 12,
-    textAlign: "left",
-    borderBottom: "1px solid #eee",
-    color: "#333",
-  };
-  const thStyle = {
-    backgroundColor: "#FF7F50",
-    color: "white",
-    fontWeight: "600",
-    fontSize: 16,
-  };
   const btnStyle = {
     padding: "8px 16px",
     border: "none",
@@ -383,19 +364,6 @@ export default function Tugas() {
     backgroundColor: "#FF7F50",
     color: "white",
     boxShadow: "0 4px 8px rgba(255,127,80,0.4)",
-  };
-  const editBtnStyle = {
-    ...btnStyle,
-    backgroundColor: "#4caf50",
-    color: "white",
-    marginRight: 8,
-    boxShadow: "0 3px 6px rgba(76,175,80,0.4)",
-  };
-  const delBtnStyle = {
-    ...btnStyle,
-    backgroundColor: "#f44336",
-    color: "white",
-    boxShadow: "0 3px 6px rgba(244,67,54,0.4)",
   };
   const formStyle = {
     marginTop: 20,
@@ -462,102 +430,58 @@ export default function Tugas() {
         <p>Loading data tugas...</p>
       ) : error ? (
         <p style={{ color: "red" }}>{error}</p>
-      ) : tugas.length === 0 ? (
-        <p style={{ color: "#666" }}>Tidak ada tugas.</p>
       ) : (
-        <>
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={{ ...thtdStyle, ...thStyle, width: 50 }}>No.</th>
-                <th style={{ ...thtdStyle, ...thStyle }}>Judul</th>
-                <th style={{ ...thtdStyle, ...thStyle }}>Deskripsi</th>
-                <th style={{ ...thtdStyle, ...thStyle, width: 160 }}>Deadline</th>
-                <th style={{ ...thtdStyle, ...thStyle, width: 130 }}>Status</th>
-                <th style={{ ...thtdStyle, ...thStyle }}>Mata Kuliah</th>
-                <th style={{ ...thtdStyle, ...thStyle }}>Smt</th>
-                <th style={{ ...thtdStyle, ...thStyle, width: 140 }}>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagedTugas.map((t, i) => (
-                <tr key={t.$id} style={{ backgroundColor: "white" }}>
-                  <td style={thtdStyle}>{startIdx + i + 1}</td>
-                  <td style={thtdStyle}>{t.title}</td>
-                  <td style={thtdStyle}>{t.description}</td>
-                  <td style={thtdStyle}>
-                    {t.due_date
-                      ? new Date(t.due_date).toLocaleDateString() +
-                        " " +
-                        new Date(t.due_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      : "-"}
-                  </td>
-                  <td style={thtdStyle}>{statusMapping[t.status_code] ?? "Unknown"}</td>
-                  <td style={thtdStyle}>
-                      {t.matkul ? `${t.matkul} (${t.sks || "-"} SKS)` : "-"}
-                   </td>
-
-                  <td style={thtdStyle}>{t.semester || "-"}</td>
-                  <td style={thtdStyle}>
-                    <button
-                      style={editBtnStyle}
-                      onClick={() => handleEdit(t)}
-                      disabled={formLoading}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      style={delBtnStyle}
-                      onClick={() => handleDelete(t.$id)}
-                      disabled={formLoading}
-                    >
-                      Hapus
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {totalPages > 1 && (
-            <div
-              style={{
-                marginTop: 12,
-                display: "flex",
-                justifyContent: "center",
-                gap: 12,
-              }}
-            >
-              <button
-                style={{
-                  ...btnStyle,
-                  backgroundColor: page === 1 ? "#ccc" : "#FF7F50",
-                  color: page === 1 ? "#666" : "white",
-                  cursor: page === 1 ? "default" : "pointer",
-                }}
-                disabled={page === 1}
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-              >
-                Prev
-              </button>
-              <span style={{ alignSelf: "center", fontWeight: "600" }}>
-                Halaman {page} dari {totalPages}
-              </span>
-              <button
-                style={{
-                  ...btnStyle,
-                  backgroundColor: page === totalPages ? "#ccc" : "#FF7F50",
-                  color: page === totalPages ? "#666" : "white",
-                  cursor: page === totalPages ? "default" : "pointer",
-                }}
-                disabled={page === totalPages}
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </>
+        <Tabel
+          columns={[
+            { header: "No.", key: "no", width: 50, render: (_, i) => startIdx + i + 1 },
+            { header: "Judul", key: "title" },
+            { header: "Deskripsi", key: "description" },
+            {
+              header: "Deadline",
+              key: "due_date",
+              width: 160,
+              render: (t) =>
+                t.due_date
+                  ? new Date(t.due_date).toLocaleDateString() +
+                    " " +
+                    new Date(t.due_date).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "-",
+            },
+            {
+              header: "Status",
+              key: "status_code",
+              width: 130,
+              render: (t) => statusMapping[t.status_code] ?? "Unknown",
+            },
+            {
+              header: "Mata Kuliah",
+              key: "matkul",
+              render: (t) => (t.matkul ? `${t.matkul} (${t.sks || "-"} SKS)` : "-"),
+            },
+            { header: "Smt", key: "semester" },
+            {
+              header: "Aksi",
+              key: "aksi",
+              width: 140,
+              render: (t) => (
+                <TombolAksi
+                  onEdit={() => handleEdit(t)}
+                  onDelete={() => handleDelete(t.$id)}
+                  disabled={formLoading}
+                />
+              ),
+            },
+          ]}
+          data={pagedTugas}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          loading={loading}
+          error={error}
+        />
       )}
 
       {formVisible && (

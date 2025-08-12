@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { databases } from "../lib/appwrite";
 import { Query } from "appwrite";
+import Tabel from "../components/Tabel";
 
 const databaseId = "6897a656003536fecb03";
 const collectionId = "6897a65e0030c01af6e7";
@@ -11,27 +12,6 @@ export default function NilaiPage() {
   const [error, setError] = useState(null);
 
   const fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-  const tableStyle = {
-    width: "100%",
-    borderCollapse: "collapse",
-    marginTop: 20,
-    fontFamily,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-    borderRadius: 8,
-    overflow: "hidden",
-  };
-  const thtdStyle = {
-    padding: 12,
-    textAlign: "left",
-    borderBottom: "1px solid #eee",
-    color: "#333",
-  };
-  const thStyle = {
-    backgroundColor: "#FF7F50",
-    color: "white",
-    fontWeight: "600",
-    fontSize: 16,
-  };
 
   useEffect(() => {
     const fetchNilai = async () => {
@@ -70,58 +50,31 @@ export default function NilaiPage() {
         Daftar Nilai
       </h1>
 
-      <table style={tableStyle}>
-        <thead>
-          <tr>
-            <th style={{ ...thtdStyle, ...thStyle }}>No</th>
-            <th style={{ ...thtdStyle, ...thStyle }}>Mata Kuliah</th>
-            <th style={{ ...thtdStyle, ...thStyle }}>SKS</th>
-            <th style={{ ...thtdStyle, ...thStyle }}>Semester</th>
-            <th style={{ ...thtdStyle, ...thStyle }}>Nilai</th>
-            <th style={{ ...thtdStyle, ...thStyle }}>Terakhir Diupdate</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.length > 0 ? (
-            data.map((item, index) => (
-              <tr key={item.$id} style={{ backgroundColor: "white" }}>
-                <td style={thtdStyle}>{index + 1}</td>
-                <td style={thtdStyle}>{item.matkul || "-"}</td>
-                <td style={thtdStyle}>{item.sks || "-"}</td>
-                <td style={thtdStyle}>{item.semester || "-"}</td>
-                <td style={thtdStyle}>
-                  {item.nilai !== undefined && item.nilai !== null
-                    ? item.nilai
-                    : "-"}
-                </td>
-                <td
-                  style={{
-                    ...thtdStyle,
-                    fontSize: "13px",
-                    fontStyle: "italic",
-                    color: "#666",
-                  }}
-                >
-                  {item.$updatedAt
-                    ? new Date(item.$updatedAt).toLocaleDateString() +
-                      " " +
-                      new Date(item.$updatedAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "-"}
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td style={thtdStyle} colSpan="6" align="center">
-                Tidak ada data nilai
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <Tabel
+        columns={[
+          { header: "No", key: "no", render: (_, i) => i + 1 },
+          { header: "Mata Kuliah", key: "matkul" },
+          { header: "SKS", key: "sks" },
+          { header: "Semester", key: "semester" },
+          { header: "Nilai", key: "nilai" },
+          {
+            header: "Terakhir Diupdate",
+            key: "updatedAt",
+            render: (item) =>
+              item.$updatedAt
+                ? new Date(item.$updatedAt).toLocaleDateString() +
+                  " " +
+                  new Date(item.$updatedAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "-",
+          },
+        ]}
+        data={data}
+        loading={loading}
+        error={error}
+      />
 
       <p style={{ marginTop: 16 }}>
         <strong>Total SKS:</strong> {totalSks}
